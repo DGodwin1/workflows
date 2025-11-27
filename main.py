@@ -5,6 +5,8 @@ import concurrent_orchestration
 
 from dotenv import load_dotenv
 from agent_framework.azure import AzureOpenAIChatClient
+from agent_framework.observability import setup_observability
+
 
 # Load environment variables from .env file
 load_dotenv()
@@ -18,7 +20,10 @@ async def main() -> None:
         print("Please set the API_KEY environment variable.")
         return
 
-    chat_client = AzureOpenAIChatClient(api_key=API_KEY, endpoint=ENDPOINT, deployment_name="gpt-5-mini")
+    print("🔭 Setting up observability")
+    setup_observability()
+
+    chat_client = AzureOpenAIChatClient(api_key=API_KEY, endpoint=ENDPOINT, deployment_name="gpt-5-mini", )
 
     researcher = chat_client.create_agent(
         instructions=(
