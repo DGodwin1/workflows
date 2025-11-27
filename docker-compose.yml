@@ -19,8 +19,11 @@ services:
     volumes:
       # Mount your custom prometheus.yml into the container
       - ./prometheus/config.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
       - "--web.enable-otlp-receiver"
     restart: unless-stopped
+volumes:
+  prometheus-data:
