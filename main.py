@@ -16,14 +16,15 @@ async def main() -> None:
     # 1) Create three domain agents using AzureOpenAIChatClient
     API_KEY = os.getenv("API_KEY")
     ENDPOINT = os.getenv("API_ENDPOINT")
-    if not API_KEY:
-        print("Please set the API_KEY environment variable.")
+    DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME")
+    if not API_KEY or not ENDPOINT or not DEPLOYMENT_NAME:
+        print("☠️ Something isn't set - check API_KEY, API_ENDPOINT, and API_DEPLOYMENT_NAME")
         return
 
     print("🔭 Setting up observability")
     setup_observability()
 
-    chat_client = AzureOpenAIChatClient(api_key=API_KEY, endpoint=ENDPOINT, deployment_name="gpt-5-mini", )
+    chat_client = AzureOpenAIChatClient(api_key=API_KEY, endpoint=ENDPOINT, deployment_name=DEPLOYMENT_NAME, )
 
     researcher = chat_client.create_agent(
         instructions=(
