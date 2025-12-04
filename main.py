@@ -1,7 +1,7 @@
 import asyncio
 import os
 
-import concurrent_orchestration
+import orchestrator
 import participants
 
 from dotenv import load_dotenv
@@ -17,8 +17,9 @@ async def main() -> None:
     API_KEY = os.getenv("API_KEY")
     ENDPOINT = os.getenv("API_ENDPOINT")
     DEPLOYMENT_NAME = os.getenv("DEPLOYMENT_NAME")
-    if not API_KEY or not ENDPOINT or not DEPLOYMENT_NAME:
-        print("☠️ Something isn't set - check API_KEY, API_ENDPOINT, and API_DEPLOYMENT_NAME")
+    WORKFLOW_TYPE = os.getenv("WORKFLOW_TYPE")
+    if not API_KEY or not ENDPOINT or not DEPLOYMENT_NAME or not WORKFLOW_TYPE:
+        print("☠️ Something isn't set - check API_KEY, API_ENDPOINT, API_DEPLOYMENT_NAME and WORKFLOW_TYPE")
         return
 
     print("🔭 Setting up observability")
@@ -27,7 +28,9 @@ async def main() -> None:
     chat_client = AzureOpenAIChatClient(api_key=API_KEY, endpoint=ENDPOINT, deployment_name=DEPLOYMENT_NAME)
     legal, marketer, researcher = participants.create(chat_client)
 
-    await concurrent_orchestration.do_concurrent_workflow([researcher, marketer, legal])
+    o = orchestrator.Orchestrator([legal, marketer, researcher], workflow=WORKFLOW_TYPE)
+
+    await o.do_workflow()
 
 if __name__ == "__main__":
     asyncio.run(main())
