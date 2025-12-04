@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Azure AI Agent Framework workflows project"
 requires-python = ">=3.14"
 dependencies = [
-    "agent-framework[azure]",
+    "agent-framework",
     "azure-identity",
     "python-dotenv",
 ]
