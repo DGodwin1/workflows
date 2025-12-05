@@ -1,16 +1,24 @@
 import asyncio
 import os
-
-import orchestrator
+from contextlib import asynccontextmanager
 
 import dotenv
-import agent_framework.observability
-import agent_framework.azure
-
 import fastapi
 import prometheus_client
 import uvicorn
-app = fastapi.FastAPI(debug=False)
+from fastapi import FastAPI
+
+import agent_framework.azure
+import agent_framework.observability
+import orchestrator
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print("🔭 Setting up observability")
+    agent_framework.observability.setup_observability()
+    yield
+    print("Bye now 😎")
+app = fastapi.FastAPI(debug=False, lifespan=lifespan)
 
 metrics_app = prometheus_client.make_asgi_app()
 app.mount("/metrics", metrics_app)
@@ -23,13 +31,9 @@ def health():
 def metrics():
     return fastapi.responses.Response(prometheus_client.generate_latest(), media_type=prometheus_client.CONTENT_TYPE_LATEST)
 
-async def run_server():
-    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
-
-async def main() -> None:
-    dotenv.load_dotenv()
+@app.post("/query")
+async def query():
+    """Endpoint to trigger the workflow"""
     print("⚙️ Setting up domain agents and concurrent workflow")
 
     API_KEY = os.getenv("API_KEY")
@@ -38,10 +42,10 @@ async def main() -> None:
     WORKFLOW_TYPE = os.getenv("WORKFLOW_TYPE")
     if not API_KEY or not ENDPOINT or not DEPLOYMENT_NAME or not WORKFLOW_TYPE:
         print("☠️ Something isn't set - check API_KEY, API_ENDPOINT, DEPLOYMENT_NAME and WORKFLOW_TYPE")
-        return
-
-    print("🔭 Setting up observability")
-    agent_framework.observability.setup_observability()
+        return fastapi.responses.JSONResponse(
+            status_code=500,
+            content={"error": "Missing required environment variables"}
+        )
 
     chat_client = agent_framework.azure.AzureOpenAIChatClient(api_key=API_KEY, endpoint=ENDPOINT, deployment_name=DEPLOYMENT_NAME)
 
@@ -49,12 +53,10 @@ async def main() -> None:
 
     await workflow_orchestrator.do_workflow()
 
-async def main_with_server():
-    await asyncio.gather(
-        run_server(),
-        main(),
-        return_exceptions=True
-    )
+    return fastapi.responses.JSONResponse(content={"status": "workflow completed"})
 
 if __name__ == "__main__":
-    asyncio.run(main_with_server())
+    dotenv.load_dotenv()
+    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    asyncio.run(server.serve())
