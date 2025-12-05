@@ -7,7 +7,26 @@ import dotenv
 import agent_framework.observability
 import agent_framework.azure
 
+import fastapi
+import prometheus_client
+import uvicorn
+app = fastapi.FastAPI(debug=False)
 
+metrics_app = prometheus_client.make_asgi_app()
+app.mount("/metrics", metrics_app)
+
+@app.get("/health")
+def health():
+    return fastapi.responses.Response(content="OK", media_type="text/plain")
+
+@app.get("/metrics")
+def metrics():
+    return fastapi.responses.Response(prometheus_client.generate_latest(), media_type=prometheus_client.CONTENT_TYPE_LATEST)
+
+async def run_server():
+    config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
 
 async def main() -> None:
     dotenv.load_dotenv()
@@ -30,5 +49,12 @@ async def main() -> None:
 
     await workflow_orchestrator.do_workflow()
 
+async def main_with_server():
+    await asyncio.gather(
+        run_server(),
+        main(),
+        return_exceptions=True
+    )
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(main_with_server())
